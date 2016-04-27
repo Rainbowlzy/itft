@@ -1,48 +1,91 @@
 (ns interface-test.script
-  (:use [interface-test.core :refer [call-default call-service call-8008]]
+  (:use [interface-test.core :refer [call-default call-service call-8008 body call-online]]
         [clojure.string :refer [split join trim upper-case lower-case]]
         [dk.ative.docjure.spreadsheet :refer [select-columns load-workbook select-sheet]]
         [clojure.set :refer [intersection difference]]
+        [clj-http.client :as client]
+        [interface-test.encrypto :refer [decry encry]]
         ;; [clojure.set :as cs]
         ;; [clojure.string :as string]
         ;; [dk.ative.docjure.spreadsheet :as xls]
-        ;; [clojure.data.json :as json]
+        [clojure.data.json :refer [write-str]]
         ;; [clojure.java.shell :as sh]
-        ))
+        [clojure.pprint :refer [pprint]]
+        [ring.adapter.jetty]
+        [ring.util.response]
+        [hiccup.form :as form]
+        [hiccup.core :refer [html]]
+        [compojure.core :refer [GET POST defroutes]]
+        [ring.middleware.multipart-params]
+        [ring.middleware.session         :refer [wrap-session]]
+        [ring.middleware.params         :refer [wrap-params]]
+        [ring.middleware.cookies        :refer [wrap-cookies]]
+        [ring.middleware.keyword-params :refer [wrap-keyword-params]]
+
+        )
+  (:require [compojure.route :as route]))
 ;; (body (call-default "check" {:type "alltypes"}))
-(defn text-2-vectors
-  ([text] (for [line (clojure.string/split text #"\n")
-                :when (not-empty? line)]
-            (clojure.string/split line #"\t"))))
-(def summary-comments "summary-comments" "
-        /// <summary>
-        /// %s
-        /// </summary>
-")
 
-(defn vast-data-doc-2-properties
-  ([text] (reduce str (for [line (text-2-vectors text)]
-                        (let [field-name (first line)
-                              comments (str (second line) " -- " (last line))]
-                          (str (format summary-comments comments) "        private string _" field-name " = string.Empty; 
-        public string " field-name " {get { return _" field-name "; } set { _" field-name "=value; }}"))))))
+(defn main-page [req]
+  (let [{params :params} req]
+    (pprint req)
+    (html
+     [:h1 "Interface Test Page"]
+     (form-to
+      ["post" "/call"]
+      [:div
+       (label {} "url" "url")
+       [:div(text-field :url (str (:url params)))]
+       ]
+      [:div
+       (label {} "request" "request")
+       [:div(text-area :request (str (:request params)))]
+       ]
+      [:div
+       (label {} "response" "response")
+       [:div(text-area :response (interface-test.core/call (str (:url params)) (str (:request params))))]
+       ] [:button "submit"])
+     )))
 
-(keys (first (:list (clojure.data.json/read-str
-                     (:body
-                      (clj-http.client/get (decrypt-with-hello "SP5MzDD8dJDweJL9Re7dN7o5LZSFJZgVlAFYoknLvXQv9hlAQtlh8wNYUeOV+2Se4VBsJxSprnypC0q4Bi46jbwfVKM4FLr53Ps1swaa+qo="))) :key-fn keyword))))
 
-(def is-product-invalid #(or (= (:bookDaysMin %) "0")
-                             (empty? (:bookDaysMin %))
-                             (= (:bookDaysMax %) "0")
-                             (empty? (:bookDaysMax %))))
 
-;; (for [prod (:abroadProductList (body (call-default "getabroadproductlist" {:pageSize 999999})))]
-;;   (for [sprod (:priceInfo (body (call-default "getabroaddetail" (select-keys prod [:productId :mainTitle]))))]
-;;     (for [sprodd (:priceDetail sprod)]
-;;       (let [sub-prod (select-keys sprodd [:productId :supplierRelationId])]
-;;         (let [product-param (conj (select-keys prod [:productId :mainTitle])
-;;                             (assoc sub-prod :resourceId (:productId sub-prod) :productId (:productId prod)))
-;;               product (body (call-default "getdetailforsubmit" product-param))]
-;;           (if (is-product-invalid product) (conj product-param product))
-;;           )))))
+
+(defroutes main-routes
+  (route/files "/")
+  (GET "/" [req] main-page)
+  (POST "/call" [req] main-page))
+
+(def app (-> #'main-routes
+             wrap-keyword-params
+             wrap-params
+             wrap-cookies
+             wrap-session
+             wrap-multipart-params
+             ))
+
+(defn -main [& args]
+  (defonce server (run-jetty app {:port 18081})))
+;; (client/get  (:dbu (body (call-default "getabroadproductlist"))))
+;; (let [url (str (:dbu (body (call-default "getabroadproductlist"))))
+;;       idx (inc (.indexOf url "?" 9))]
+;;   (str url "\n" (.substring url 0 idx)(ring.util.codec/url-encode (.substring url idx))))
+
+
+(body (call-online "changyouhaiwai" {}))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
