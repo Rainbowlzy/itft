@@ -63,15 +63,17 @@
              wrap-multipart-params
              ))
 
-(defn -main [& args]
-  (defonce server (run-jetty app {:port 18081})))
-;; (client/get  (:dbu (body (call-default "getabroadproductlist"))))
-;; (let [url (str (:dbu (body (call-default "getabroadproductlist"))))
-;;       idx (inc (.indexOf url "?" 9))]
-;;   (str url "\n" (.substring url 0 idx)(ring.util.codec/url-encode (.substring url idx))))
+;; (defn -main [& args]
+;;   (defonce server (run-jetty app {:port 18081})))
 
 
-(body (call-online "changyouhaiwai" {}))
+
+
+(for [prod (:abroadProductList (body (call-default "getabroadproductlist" {:productId 23018} 810)))]
+  (select-keys prod [:labelsList]))
+
+
+
 
 
 

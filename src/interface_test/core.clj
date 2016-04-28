@@ -113,13 +113,16 @@
   ([params service client version url deviceid]
    (try
      (let [request (build-request {:params params :service service :client client :version version :url url :deviceid deviceid})
-          request-text (json/write-str request)
+           request-text (json/write-str request)
           ]
       (println url)
       (println request-text)
       {:request request
        :response (let[rsp-text (call url request-text)
-                      rsp (json/read-str rsp-text :key-fn keyword)]
+                      rsp (try
+                            (json/read-str rsp-text :key-fn keyword)
+                            (catch Exception ex {:msg (.getMessage ex)
+                                                 :rsp-text rsp-text}))]
                    ;; (->> rsp :response :header :rspDesc (str service " ") println)
                    ;; (->> rsp pprint)
                    rsp)
