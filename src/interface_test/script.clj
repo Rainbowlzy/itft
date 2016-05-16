@@ -1,5 +1,5 @@
 (ns interface-test.script
-  (:use [interface-test.core :refer [call-default call-service call-8008 body call-online]]
+  (:use [interface-test.core :refer [call-default call-service call-8008 body call-online save-excel get-abroad-product-list get-abroad-detail soa]]
         [clojure.string :refer [split join trim upper-case lower-case]]
         [dk.ative.docjure.spreadsheet :refer [select-columns load-workbook select-sheet]]
         [clojure.set :refer [intersection difference]]
@@ -14,80 +14,44 @@
         [ring.adapter.jetty]
         [ring.util.response]
         [hiccup.form :as form]
+        [clojure.java.jdbc]
         [hiccup.core :refer [html]]
         [compojure.core :refer [GET POST defroutes]]
         [ring.middleware.multipart-params]
         [ring.middleware.session         :refer [wrap-session]]
         [ring.middleware.params         :refer [wrap-params]]
         [ring.middleware.cookies        :refer [wrap-cookies]]
-        [ring.middleware.keyword-params :refer [wrap-keyword-params]]
+        [clojure.test]
+        [ring.middleware.keyword-params :refer [wrap-keyword-params]])
+  (:require [compojure.route :as route]
+            [clj-sockets.core :refer [create-socket write-to close-socket read-line read-lines write-line]]
+            [selmer.parser :refer [render-file]]))
 
-        )
-  (:require [compojure.route :as route]))
-;; (body (call-default "check" {:type "alltypes"}))
+;; (set (for [prod (client/get-abroad-product-list)]
+;;        (conj (select-keys prod [:productId :mainTitle])
+;;              {:keys (set (let [id (:productId prod)
+;;                                white-list (set [:priceId])
+;;                                ent (client/get-abroad-detail id)
+;;                                ks (difference (set (keys ent)) white-list)]
+;;                            (for [k ks :when (empty? (clojure.core/get ent k))]
+;;                              k)))})))
 
-(defn main-page [req]
-  (let [{params :params} req]
-    (pprint req)
-    (html
-     [:h1 "Interface Test Page"]
-     (form-to
-      ["post" "/call"]
-      [:div
-       (label {} "url" "url")
-       [:div(text-field :url (str (:url params)))]
-       ]
-      [:div
-       (label {} "request" "request")
-       [:div(text-area :request (str (:request params)))]
-       ]
-      [:div
-       (label {} "response" "response")
-       [:div(text-area :response (interface-test.core/call (str (:url params)) (str (:request params))))]
-       ] [:button "submit"])
-     )))
+;; (set (for [prod (client/get-abroad-product-list)
+;;            :when (empty? (->> (client/get-abroad-detail (:productId prod)) :priceInfo set))]
+;;        (select-keys prod [:productId :mainTitle])))
 
+;; (for [prod-in-list (->> (call-default "getabroadproductlistwifi" {:pageSize 99}) body :abroadProductList)]
+;;   (let [prod (select-keys prod-in-list [:mainTitle :preorderRemark :labelsList])]
+;;     (vector (:mainTitle prod) (:preorderRemark prod) (for [label (:labelsList prod)] (:labelsText label)))))
 
+;; (client/get-abroad-detail 15237)
+;; (filter #(.contains % "Request") (->> (body (call-default "check" {:type "alltypes"})) :Types))
 
+(->> (call-default "check" {:api "gen" :keywords "Sub_OrderWanleForAPP"}))
 
-(defroutes main-routes
-  (route/files "/")
-  (GET "/" [req] main-page)
-  (POST "/call" [req] main-page))
+(defn methods [ent] (for [method (.getMethods (.getClass ent))]
+                      (.getName method)))
 
-(def app (-> #'main-routes
-             wrap-keyword-params
-             wrap-params
-             wrap-cookies
-             wrap-session
-             wrap-multipart-params
-             ))
-
-;; (defn -main [& args]
-;;   (defonce server (run-jetty app {:port 18081})))
-
-
-
-
-(for [prod (:abroadProductList (body (call-default "getabroadproductlist" {:productId 23018} 810)))]
-  (select-keys prod [:labelsList]))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+(->> (call-default "getabroadproductlistwifi") body :abroadProductList first :productId get-abroad-detail)
 
 

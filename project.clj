@@ -3,6 +3,7 @@
   :url "http://example.com/FIXME"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
+  :resource-paths ["resources/sqljdbc_6.0/enu/sqljdbc4.jar" "resources/sqljdbc_6.0/enu/sqljdbc.jar"]
   :plugins [
             ;; [lein-swank "1.4.5"]
             ;; [cider/cider-nrepl "0.11.0"]
@@ -46,8 +47,11 @@
                  ;; [racehub/om-bootstrap "0.5.0"]
                  ;; [ring/ring-codec "1.0.0"]
                  [compojure "1.5.0"]
-                 ;; ;; [selmer "1.0.2"]
+                 [selmer "1.0.2"]
 
+
+                 [org.clojure/clojure "1.6.0"]
+                 [org.clojure/java.jdbc "0.3.6"]
 
 
                  ;; Original dependency
