@@ -64,4 +64,5 @@
                  [dk.ative/docjure "1.10.0"]
                  [org.clojars.tnoda/simple-crypto "0.1.0"]
                  [org.clojure/data.json "0.2.6"]
+                 ;; [com.github.kyleburton/clj-xpath "1.4.5"]                 
                  ])
