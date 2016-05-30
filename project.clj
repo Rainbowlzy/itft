@@ -12,6 +12,7 @@
             ;; [refactor-nrepl "2.3.0-SNAPSHOT"]
             ]
   :dependencies [
+                 [clj.qrgen "0.4.0"]
                  ;; [org.clojure/clojure "1.8.0"]
                  ;; [org.clojure/data.xml "0.1.0-beta1"]
                  ;; [enlive "1.1.6"]
