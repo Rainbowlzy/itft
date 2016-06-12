@@ -1,6 +1,6 @@
 (ns interface-test.script
   (:use
-   [interface-test.core :refer [call-default call-service call-8008 body call-online save-excel get-abroad-product-list get-abroad-detail soa do-loop call-8018 gen-doc]]
+   [interface-test.core :refer [call-default call-service call-8008 body call-online save-excel get-abroad-product-list get-abroad-detail soa do-loop call-8018 gen-doc read-str-keywords do-loop-future orders]]
    ;; [interface-test.core :refer :all]
    [clojure.string :refer [split join trim upper-case lower-case]]
    [dk.ative.docjure.spreadsheet :refer [select-columns load-workbook select-sheet]]
@@ -31,63 +31,54 @@
             [clj-sockets.core :refer [create-socket write-to close-socket read-line read-lines write-line]]
             [selmer.parser :refer [render-file]]))
 
-;; (->> (call-default "getabroadindex811" {:productId 20901}) body)
-;; (->> (call-default "getabroaddestselectlist" {:destType 1}) body)
-;; (select-keys
-;;  (->> (call-default "getabroaddetail" {:productId 20132}) body)
-;;  [:productId :mainTitle :iconList :imgUrlList :reason :feature :bookingNoticeList])
-;; (select-keys
-;;  (->> (call-8008 "getabroaddetail" {:productId 20901}) body)
-;;  [:productId :mainTitle :iconList :imgUrlList :reason :feature :bookingNoticeList])
 
-;; (->> (call-8008 "getabroaddetail" {:productId 20901}) body)
-;; (->> (call-default "getabroaddetail" {:productId 20132}) body)
-;; (->> (call-default "getabroaddetail" {:productId 18042}) body)
-;; (->> (call-default "getphonecard") body)
-;; (->> (call-default "getphonecard") :url)
-;; (->> (call-default "getphonecard") body :groupList (do-loop :productList))
-;; (->> (call-online "getphonecard") body)
-
-;; (->> (call-default "getabroadproductlist" {:tagIds "13"}) body :abroadProductList (do-loop #(select-keys % [:labelsList :mainTitle])))
-;; (->> (call-default "getabroadproductlist" {:tagIds "13"}) body)
-;; (->> (call-default "getabroadstatisticslist" {:destType "1"}) body)
-;; (->> (call-default "getabroaddestinationindex811" {:dest "°ÅµÌÑÅ"}) body)
-;; (->> (call-default "getabroaddetail" {:productId 20901}) body)
-;; (->> (call-8008 "getabroadindex811") body)
-;; (->> (call-8008 "getabroadindex") body  :todayRecommendList)
-;; (->> (call-8008 "getredpackagetosendinfo" {:memberId "0f585ab28c7c7b976a2ae8c831f07cf9"}) body)
-
-;; (sh
-;;  (str "C:/Program Files (x86)/Google/Chrome/Application/chrome.exe" (.getAbsolutePath (as-file (from "tctclient://destination/list?destName=°ÅµÌÑÅ&sourceType=3&projectId=40&extendInfo={\"themeId\":\"\",\"defaultTitle\":\"È«²¿\"}"))))
-;;  )
-
-
-
-(->> (call-default "getabroadproductlist" {:tagIds 6,:multiPlayTheme "6"})
-     body
-     :url
-     ;; get
-     ;; :body
+(->> (load-workbook "D:/MyConfiguration/lzy13870/Desktop/sent/memberId_outputs.xlsx")
+     (select-sheet "Table1")
+     (select-columns {:A :request})
+     (do-loop (comp
+               #(select-keys % [:memberId])
+               :body
+               :request
+               read-str-keywords
+               :request))
+     (filter (comp not empty?))
+     (do-loop-future (comp orders :memberId))
+     (reduce into)
+     (do-loop-future #(select-keys % [:memberId :scendDesc :orderStatus :title :orderMajorKey :orderId :orderSerialId :orderCreateTime :projectTag]))
+     save-excel
      )
 
-(->> (call-8008 "getabroadstatisticslist" {:destType 1})
-     body :youhuiFilter)
-
-(->> (call-default "getabroaddestinationindex811" {:dest "°ÍÀåµº"}) body :imageList)
-(->> (call-default "getabroaddestinationindex811" {:dest "°ÍÀåµº"}))
-(->> (call-default "getabroadindex811" {:dest "°ÅµÌÑÅ"}) body)
-(->> (call-default "getabroadindex811" {:dest "°ÅµÌÑÅ"}))
-(->> (call-8008 "getabroaddestinationindex811" {:dest "°ÍÀåµº"}) body)
-(->> (call-8008 "getdetailforsubmit" {:productId 295026 :supplierRelationId 79953 :resourceId 20180}) body)
-(->> (call-8008 "getabroadindex811" {:dest "°ÅµÌÑÅ"}) body)
-
-;; (->> (post "http://tcoa.17usoft.com/" {:form-params {:EmpCode 13870 :EmpPwd "a.321321321" :RememberPwd "true"}}))
+(->> (call-default "getabroadproductlist" {:pageSize 100 :page 1})
+     body
+     :pageInfo
+     :totalPage
+     Integer/parseInt)
 
 
 
+(->> (for [i (range 52)]
+       (future (get-abroad-product-list {:pageSize 100 :page i})))
+     (do-loop deref)
+     (reduce into)
+     (do-loop #(select-keys % [:productId :mainTitle]))
+     save-excel)
 
 
-
+(->> (load-workbook "D:/MyConfiguration/lzy13870/Documents/branchs/interface-test/src/interface_test/output-1465716078480.xlsx")
+     (select-sheet "product list")
+     (select-columns {:A :productId})
+     (do-loop :productId)
+     (do-loop-future get-abroad-detail)
+     (#(for [prod %]
+         (for [price (:priceInfo prod)]
+           (for [price-detail (:priceDetail price)]
+             (assoc (select-keys price-detail [:productId :supplierRelationId :priceDes]) :resourceId (:productId prod))))))
+     (reduce into)
+     (reduce into)
+     ;; (do-loop (fn [prod] (->> (call-default "getdetailforsubmit" prod)
+     ;;                          body)))
+     save-excel
+     )
 
 
 

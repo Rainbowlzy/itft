@@ -56,11 +56,11 @@
 (defn call[url input]
   (try
     (let[socket (create-socket "127.0.0.1" 17788)]
-    (write-to socket (json/write-str {:url url :input input}))
-    (let[resp (read-line socket)]
-      (close-socket socket)
-      resp)
-    )
+      (write-to socket (json/write-str {:url url :input input}))
+      (let[resp (read-line socket)]
+        (close-socket socket)
+        resp)
+      )
     (catch Exception exception (str exception))))
 (defn build-request
   ([params service client version url deviceid]
@@ -89,22 +89,22 @@
 (defn build-request
   ([req]
    {:request
-                  {:body
-                   (into {:clientInfo
-                          {:deviceId (:deviceid req),
-                           :extend (str (decry "6/JhO8cX4mPtUVTvBLaGMwRjA0KGDucAVvk8fUzXIMQ=") (:client req) (decry "jzMwTvclfszpEC8N2KGulw==") (:client req) "6_2"),
-                           :mac (decry "94ldCBnqQeNttJAkjqZP6FoOSOjQpPw3KlvC7OYfrOwEYwNChg7nAFb5PH1M1yDE"),
-                           :refId (decry "W7JLTEotMrh8k7jiryajbg=="),
-                           :versionType (str (:client req)),
-                           :clientIp (decry "2EVz8WAdpjmZ5nhyDR8DYg=="),
-                           :networkType "wifi",
-                           :versionNumber (clojure.string/join "." (filter #(not (empty? %)) (clojure.string/split (str (:version req)) #"")))}}
-                         (:params req)),
-                   :header {:accountID (decry "cQJNrmwGSj4ooOQokcHxmxUpuAnO6yfjyTbh1VagTB7SbbYVZTSmRZhYBAI7Sd8X"),
-                            :encryptEffort "0",
-                            :serviceName (str (:service req)),
-                            :reqTime (decry "znlOCEZFLcZqbhUebg6luQ=="),
-                            :version (decry "F1kKdUsWv1bJ/Ogyy9D40w==")}}}))
+    {:body
+     (into {:clientInfo
+            {:deviceId (:deviceid req),
+             :extend (str (decry "6/JhO8cX4mPtUVTvBLaGMwRjA0KGDucAVvk8fUzXIMQ=") (:client req) (decry "jzMwTvclfszpEC8N2KGulw==") (:client req) "6_2"),
+             :mac (decry "94ldCBnqQeNttJAkjqZP6FoOSOjQpPw3KlvC7OYfrOwEYwNChg7nAFb5PH1M1yDE"),
+             :refId (decry "W7JLTEotMrh8k7jiryajbg=="),
+             :versionType (str (:client req)),
+             :clientIp (decry "2EVz8WAdpjmZ5nhyDR8DYg=="),
+             :networkType "wifi",
+             :versionNumber (clojure.string/join "." (filter #(not (empty? %)) (clojure.string/split (str (:version req)) #"")))}}
+           (:params req)),
+     :header {:accountID (decry "cQJNrmwGSj4ooOQokcHxmxUpuAnO6yfjyTbh1VagTB7SbbYVZTSmRZhYBAI7Sd8X"),
+              :encryptEffort "0",
+              :serviceName (str (:service req)),
+              :reqTime (decry "znlOCEZFLcZqbhUebg6luQ=="),
+              :version (decry "F1kKdUsWv1bJ/Ogyy9D40w==")}}}))
 
 (defn call-service
   ([params service client version url] (call-service params service client version url (first deviceids)))
@@ -117,29 +117,38 @@
                                                          :accepted-json-error true
                                                          :request request}))))]
        ;; (println url service request-text)
-      {:request request
-       :response (let[rsp-text (call url request-text)
-                      rsp (try
-                            (json/read-str rsp-text :key-fn keyword)
-                            (catch Exception ex {:msg (.getMessage ex)
-                                                 :rsp-text rsp-text}))]
-                   
-                   (when (not (= (:rspCode rsp) "0000")) (->> rsp :response :header :rspDesc (str service " ") println))
-                   ;; (->> rsp pprint)
-                   rsp)
-       :url url}
-      )
+       {:request request
+        :response (let[rsp-text (call url request-text)
+                       rsp (try
+                             (json/read-str rsp-text :key-fn keyword)
+                             (catch Exception ex {:msg (.getMessage ex)
+                                                  :rsp-text rsp-text}))]
+                    
+                    (when
+                        (not
+                         (= (->> rsp :response :header :rspCode) "0000"))
+                      (->> rsp
+                           :response
+                           :header
+                           :rspDesc
+                           (str service " ")
+                           println))
+                    rsp)
+        :url url}
+       )
      (catch Exception exception (str exception)))))
 
 (def abroad (-> config :handlers :abroadactivity))
 
 (defn call-default
+  "call localhost iis environment"
   ([sv] (call-default sv {}))
   ([sv params] (call-service params sv (decry "+RidXrwPi5LFSpJthYo6Ng==") current-version (str (-> config :domains :vm) abroad)))
   ([sv params version deviceid] (call-service params sv (decry "+RidXrwPi5LFSpJthYo6Ng==") current-version (str (-> config :domains :vm) abroad) deviceid))
   ([sv params version] (call-service params sv (decry "+RidXrwPi5LFSpJthYo6Ng==") (str version) (str (-> config :domains :vm) abroad))))
 
 (defn call-8008
+  "call 8008 environment"
   ([sv] (call-8008 sv {}))
   ([sv params]
    (call-service params sv (decry "+RidXrwPi5LFSpJthYo6Ng==") current-version (str (-> config :domains :test8008))))
@@ -148,11 +157,13 @@
   ([sv params version](call-service params sv (decry "+RidXrwPi5LFSpJthYo6Ng==") (str version) (str (-> config :domains :test8008)))))
 
 (defn call-8018
+  "call 8018 environment"
   ([sv] (call-8008 sv {}))
   ([sv params] (call-service params sv (decry "+RidXrwPi5LFSpJthYo6Ng==") current-version (str (-> config :domains :test8018))))
   ([sv params version] (call-service params sv (decry "+RidXrwPi5LFSpJthYo6Ng==") (str version) (str (-> config :domains :test8018)))))
 
 (defn call-online
+  "call online environment"
   ([sv params] (call-service params sv (decry "+RidXrwPi5LFSpJthYo6Ng==") current-version (str (-> config :domains :online))))
   ([sv] (call-online sv {})))
 (defn iter-show[p coll]
@@ -253,7 +264,7 @@
     (->> (call-default "getdetailforsubmit" {:supplierRelationId supplier-relation-id :productId sub-product-id}) body)))
 
 (defn get-abroad-detail [prod-id]
-  (->> (call-default "getabroaddetail" {:productId (Integer/parseInt prod-id)}) body))
+  (->> (call-default "getabroaddetail" {:productId (Integer/parseInt (str prod-id))}) body))
 
 (defn get-abroad-product-list
   ([] (get-abroad-product-list {})) ([filter] (->> (call-default "getabroadproductlist" filter) body :abroadProductList)))
@@ -272,3 +283,42 @@
 (defn gen-props [s] (reduce str (->> s split-space (do-loop string-prop))))
 
 (defn gen-doc [ent] (str (->> ent :request json/write-str) (reduce str (repeat 2 "\n")) (->> ent :response json/write-str)))
+
+(defn getabroaddestselectlist
+  "call interface"
+  [] (->> (reduce into (->> (call-8008 "getabroaddestselectlist" {:destType 1 :dataVersion 3})
+                            body
+                            :selectDestList
+                            (do-loop :cityList)))
+          (do-loop :cName)))
+(defn getabroaddestinationindex811
+  "call interface"
+  [dest] (->> (call-8008 "getabroaddestinationindex811" {:dest (str dest)}) body))
+
+(defn check-destination
+  [dest]
+  (let [coll (->> dest getabroaddestinationindex811)
+        ks (keys coll)]
+    (filter (comp not nil?) (for [k ks]
+                              (cond (empty? (k coll)) (str dest " " k " is empty!" \newline)
+                                    (and (= k :productList) (< (count (k coll)) 10)) (str dest " " k " is less then 10!" \newline)
+                                    )))))
+
+(defn do-check-destination [] (filter (comp not empty?) (do-loop check-destination (getabroaddestselectlist))))
+
+
+
+(defn do-loop-future
+  [fn coll]
+  (for [callback  (for [ent coll]
+                    (future (fn ent)))]
+    @callback))
+
+(defn orders [memberId]
+  (let [p {:memberId memberId}]
+    (->> (call-service p "GetOrderListInfo" "iphone" 810 "http://61.155.197.173:8018/ordercenter/Order/OrderListHandler.ashx")
+         body
+         :orderListAll
+         (do-loop #(conj p %))
+         )
+    ))
